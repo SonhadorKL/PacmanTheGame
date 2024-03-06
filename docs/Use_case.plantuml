@@ -1,0 +1,24 @@
+@startuml Use_case_diagram
+
+:Player: --> (Start game)
+:Player: --> (Move pacman)
+:Player: --> (Close game)
+
+:System: --> (Move ghosts)
+
+(Move pacman) --> (Pacman and food collide)
+(Pacman and food collide) --> (All food collected)
+(Pacman and food collide) --> (Score up)
+(All food collected) --> (Restart level)
+
+(Move pacman) --> (Pacman and ghost collide)
+(Move ghosts) --> (Pacman and ghost collide)
+
+(Pacman and ghost collide) --> (Health down)
+(Health down) --> (Close game) : {if\nhealth\nis\nzero}
+(Health down) -r-> (Restart level)
+
+
+
+
+@enduml

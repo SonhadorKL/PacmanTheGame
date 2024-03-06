@@ -1,0 +1,5 @@
+#pragma once
+#include <string>
+
+const std::string kPathToDir = @ASSETS_DIR@;
+const std::string kPathToData = @DATA_DIR@;

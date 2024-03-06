@@ -1,0 +1,11 @@
+.vscode
+Pacman
+Test.cpp
+build
+bin
+include/Config/DataConfig.h
+test.cpp
+assets/Sounds
+include/Tools/SoundManager.h
+src/Tools/SoundManager.cpp
+data

@@ -1,0 +1,355 @@
+@startuml Pacman
+
+skinparam groupInheritance 4
+
+abstract Entity {
+  +Entity(Texture&, double initial_speed)
+  +render(RenderWindow&)
+  +stop()
+  
+  +MovementManager move_
+  #Sprite sprite_
+  #double speed_
+ 
+}
+
+abstract MovementManager {
+  +MovementManager(Entity&)
+  {abstract} +bool change_direction(Field&)
+  {abstract} +void move(Field&)
+  {abstract} +void set_position(Vector2i pos_in_field)
+  +void change_state(Vector2i new_state)
+  +Vector2i get_state()
+  #bool reverse_position()
+  #bool at_center(Vector2i tile_coords)
+  #bool could_move_to_center(Vector2i dir, Vector2i tile_coords)
+
+  #Entity& entity_
+  #Vector2i cur_state_
+  #Vector2i next_state_
+}
+
+class PacmanMovement {
+  +PacmanMovement(Entity&)
+  +bool change_direction(Field&)
+  +void move(Field&)
+  +void set_position(Vector2i pos_in_field)
+}
+
+class GhostMovement {
+  +GhostMovement(Entity&)
+  +bool change_direction(Field&)
+  +void move(Field&)
+  +void set_position(Vector2i pos_in_field)
+
+private:
+  Vector2i cur_tile_
+}
+
+
+GhostMovement --|> MovementManager
+PacmanMovement --|> MovementManager
+MovementManager --* Entity
+
+class Pacman {
+  +void set_move_direction(sf::Event&)
+  +void update(Field&, GhostManager&, Bonuses&)
+  +void get_hit()
+  +bool is_alive()
+  -check_bonuses(Bonuses&)
+
+  -health_;
+}
+
+class Ghost {
+  +void update(Field&, Vector2f pacman_pos)
+  -void change_strategy(Vector2f pacman_pos)
+
+  -Strategy strategy_
+  -double vision_radius_
+}
+
+Entity <|-- Pacman
+Entity <|-- Ghost
+
+note right of Strategy : Отвечает за выбор поведения призраков.\nРеализовано паттерном Strategy
+interface Strategy {
+  +choose_direction()
+}
+
+class RandomSearch {
+  +choose_direction()
+}
+
+class Attack {
+  +choose_direction()
+}
+
+class RunAway {
+  +choose_direction()
+}
+
+
+RandomSearch --|> Strategy
+Attack --|> Strategy
+RunAway --|> Strategy
+
+Strategy --* Ghost
+
+class GhostManager {
+  +void update(Field&, Vector2f pacman_pos)
+  +void render(RenderWindow&)
+  +void spawn()
+  +void save_positions(vector<Vector2i>& pos)
+  +void set_position()
+  +vector<Ghost>& get_ghosts();
+
+  -vector<Vector2i> start_positions_;
+  -vector<Ghost> ghosts_;
+}
+
+Ghost --* GhostManager : 1..*
+
+class Field {
+  -std::vector<std::string> map_
+
+  +Field()
+  +render(RenderWindow&)
+  +const std::vector<std::string>& get_map()
+  +bool check_wall(const sf::Vector2i& co ord);
+  +char get_wall(const sf::Vector2i& coord);
+  -void load_map()
+}
+
+class Level {
+  +Level()
+  +void reset()
+  +void relocate()
+  +void update(Event&)
+  +render(RenderWindow&)
+  +bool is_playing()
+  +bool all_collected()
+
+  -Field field_
+  -GhostManager ghosts_
+  -Pacman player_
+  -Bonuses bonuses_
+  -void map_processing()
+  {abstract}-void handle_event(SIGNAL)
+  
+  -Vector2i start_pacman_position_
+  -Vector2i start_ghost_cage_position_
+  -Vector2i start_ghost_out_cage_position_
+}
+
+Level --* GameScene
+Field --* Level
+Pacman --* Level
+GhostManager --* Level
+Bonuses --* Level
+
+
+abstract Collectable {
+  +Collectable(Vector2i pos)
+  {abstract}+COLLECT_TYPE collected()
+  +void render(RenderWindow&)
+  +Sprite get_sprite()
+  +void disable();
+  +void activate();
+  +bool is_active();
+
+  #Sprite sprite_
+  #bool is_active_
+}
+
+
+class Food {
+  +Food(Vector2i pos)
+  +COLLECT_TYPE collected()
+}
+
+class PowerUp {
+  +PowerUp(Vector2i pos)
+  +COLLECT_TYPE collected()
+}
+
+class Bonuses {
+  +void render(RenderWindow&)
+  +void add_bonus(Collectable)
+  +void restart()
+  +void was_eaten(Collectable)
+  +bool all_collected()
+  +list<Collectable>& get_bonuses()
+
+  -int left_bonuses_
+  -list<Collectable> bonuses_
+}
+
+Collectable <|-u- Food
+Collectable <|-u- PowerUp
+Collectable --* Bonuses : 1..*
+
+note bottom of ResourceManager : Отвечает за хранение различной информации\nРеализовано паттерном Singleton
+class ResourceManager {
+  -map<string, Texture> textures_
+  -map<string, Font> fonts_
+  -map<string, SoundBuffer> sounds_
+  
+  -ResourceManager()
+  {static} -map<string, Texture>& get_instance()
+  {static} +map<string, Texture> get_textures()
+  {static} +map<string, Font> get_fonts()
+  {static} +map<string, SoundBuffer> get_sounds()
+}
+
+note left of UI : Особенность абстракного класса:\nразнообразные функции для размещения\nUI объектов относительно друг друга
+interface UI {
+  {abstract} +FloatRect get_boundaries()
+  {abstract} +Vector2f get_position()
+  {abstract} +set_position(Vector2f pos)
+  ..
+  Функции относительного расположения
+}
+Container -u-|> UI
+
+class Container {
+  {abstract} +FloatRect get_boundaries()
+  {abstract} +Vector2f get_position()
+  {abstract} +set_position()
+  + void set_object_count(int count);
+  + void set_texture(sf::Texture* texture);
+  + void set_offset(float offset);
+
+  +render()
+  +rebuild()
+  # vector<Sprite> objects
+  # Texture* object_texture
+  # int object_count
+  # float offset
+}
+
+class RemoveContainer {
+  +remove_from_left()
+  +remove_from_right()
+
+  -int removed_left
+  -int removed_right
+}
+
+Container --- RemoveContainer
+
+class Label {
+  {abstract} +FloatRect get_boundaries()
+  {abstract} +Vector2f get_position()
+  {abstract} +set_position()
+
+  #Font* font_;
+  #Text text_;
+  #bool is_shown_;
+}
+Label -u-|> UI
+
+class Map {
+  {abstract} +FloatRect get_boundaries()
+  {abstract} +Vector2f get_position()
+  {abstract} +set_position()
+  +void render(RenderTexture&)
+  -Sprite process_texture(vector<string> map, Vector2i pos)
+  
+  -vector<Sprite> walls_
+}
+Map -u-|> UI
+
+class Button {
+  {abstract} +FloatRect get_boundaries()
+  {abstract} +Vector2f get_position()
+  {abstract} +set_position()
+
+  +void control(Event)
+  +bool update(RenderWindow&, Event)
+  +void set_signal()
+  #void button_pressed()
+
+  #Sprite button_
+  #Texture unpressed_texture_
+  #Texture pressed_texture_
+  #SIGNAL signal_
+  #bool in_focus_
+  #bool was_pressed_
+}
+
+Button -u-|> UI
+
+class GameUI {
+  +void set_hp(int count);
+  +void set_score(int score);
+  +void set_level(int new_level);
+
+  +void show_ready(bool show);
+  +void remove_hp();
+
+  +void render(sf::RenderWindow& window);
+  
+  -Label score_;
+  -Label level_;
+  -Label be_ready_;
+  -RemoveContainer hearts_;
+  -Map map_;
+}
+
+Label --- Lost : 2
+Label --o GameUI : 3
+RemoveContainer --o GameUI : 1
+Map --o GameUI : 1
+interface Scene {
+  +{abstract} Scene* process(RenderWindow&, Event&)
+  +{abstract} void render(RenderWindow& window)
+}
+
+class GameScene {
+  +{abstract} Scene* process(RenderWindow&, Event&)
+  +{abstract} void render(RenderWindow& window)
+  +void start()
+  +void update_score(int delta_score)
+  +void handle_event(SIGNAL id)
+
+  -GameUI game_interface_
+  -Level cur_level_
+  -Timer be_ready_
+  -bool ready_
+  -float ready_wait_time_
+  -int score
+
+  -int multiply_score(int score)
+  -void wait_for_start()
+}
+
+GameScene --|> Scene
+GameUI --- GameScene 
+
+class Lost {
+  +{abstract} Scene* process(RenderWindow&, Event&)
+  +{abstract} void render(RenderWindow& window)
+
+  -Label lost_
+  -Label score_
+  -Timer until_restart_
+}
+
+Lost --|> Scene
+
+class Menu {
+  +{abstract} Scene* process(RenderWindow&, Event&)
+  +{abstract} void render(RenderWindow& window)
+
+  -Button play_
+  -Button quit_
+  -Label menu_
+}
+Button --- Menu : 2
+Label --- Menu : 1
+Menu --|> Scene
+
+
+
+@enduml
